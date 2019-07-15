@@ -298,29 +298,6 @@ function prompt {
     return " "
 }
 
-
-# Alias
-Set-Alias l Get-ChildItem
-Set-Alias np c:\windows\notepad.exe
-
-function cddash {
-    if ($args[0] -eq '-') {
-        $pwd = $OLDPWD;
-    }
-    else {
-        $pwd = $args[0];
-    }
-    $tmp = Get-Location;
-
-    if ($pwd) {
-        Set-Location $pwd;
-    }
-    else {
-        Set-Location $HOME
-    }
-    Set-Variable -Name OLDPWD -Value $tmp -Scope global;
-}
-
-Set-Alias -Name cd -value cddash -Option AllScope
+# ALIASES
 Set-Alias l Get-ChildItemColor -option AllScope
 Set-Alias ls Get-ChildItemColorFormatWide -option AllScope
