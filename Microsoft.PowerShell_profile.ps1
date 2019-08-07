@@ -26,7 +26,6 @@ Set-PSReadlineKeyHandler -Key DownArrow -Function HistorySearchForward
 Set-PSReadlineKeyHandler -Chord 'Shift+Tab' -Function Complete
 Set-PSReadlineKeyHandler -Key Tab -Function MenuComplete
 
-
 ###############################################################################
 
 If (-Not (Test-Path Variable:PSise)) {  # Only run this in the console and not in the ISE
@@ -35,3 +34,7 @@ If (-Not (Test-Path Variable:PSise)) {  # Only run this in the console and not i
     Set-Alias l Get-ChildItem -option AllScope
     Set-Alias ls Get-ChildItemColorFormatWide -option AllScope
 }
+
+###############################################################################
+
+Import-Module ZLocation
