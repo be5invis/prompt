@@ -1,14 +1,14 @@
 ﻿Clear-Host
 
 $scriptDir = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
+import-module $scriptDir\loader.psm1
 
 ###############################################################################
 
+InstallAndLoadModule posh-git
 import-module $scriptDir\prompt.psm1
 
-function prompt {
-	gitFancyPrompt
-}
+function prompt { gitFancyPrompt }
 
 ###############################################################################
 
@@ -29,7 +29,7 @@ Set-PSReadlineKeyHandler -Key Tab -Function MenuComplete
 ###############################################################################
 
 If (-Not (Test-Path Variable:PSise)) {  # Only run this in the console and not in the ISE
-    Import-Module Get-ChildItemColor
+    InstallAndLoadModule Get-ChildItemColor
     
     Set-Alias l Get-ChildItem -option AllScope
     Set-Alias ls Get-ChildItemColorFormatWide -option AllScope
@@ -37,4 +37,4 @@ If (-Not (Test-Path Variable:PSise)) {  # Only run this in the console and not i
 
 ###############################################################################
 
-Import-Module ZLocation
+InstallAndLoadModule ZLocation
