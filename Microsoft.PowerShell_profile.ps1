@@ -5,7 +5,8 @@ import-module $scriptDir\loader.psm1
 
 ###############################################################################
 
-InstallAndLoadModule posh-git
+InstallModuleIfAbsent posh-git
+Import-Module posh-git
 import-module $scriptDir\prompt.psm1
 
 function prompt { gitFancyPrompt }
@@ -29,7 +30,8 @@ Set-PSReadlineKeyHandler -Key Tab -Function MenuComplete
 ###############################################################################
 
 If (-Not (Test-Path Variable:PSise)) {  # Only run this in the console and not in the ISE
-    InstallAndLoadModule Get-ChildItemColor
+    InstallModuleIfAbsent Get-ChildItemColor
+    Import-Module Get-ChildItemColor
     
     Set-Alias l Get-ChildItem -option AllScope
     Set-Alias ls Get-ChildItemColorFormatWide -option AllScope
@@ -37,4 +39,5 @@ If (-Not (Test-Path Variable:PSise)) {  # Only run this in the console and not i
 
 ###############################################################################
 
-InstallAndLoadModule ZLocation
+InstallModuleIfAbsent ZLocation
+Import-Module ZLocation
