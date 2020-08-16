@@ -246,6 +246,12 @@ function local:pathPrompt {
 }
 
 function gitFancyPrompt {
+	# Reset prompt color
+	if ((get-host).Name -eq "ConsoleHost") {
+		(Get-Host).UI.RawUI.BackgroundColor = 'Black'
+		(Get-Host).UI.RawUI.ForegroundColor = 'White'
+	}
+	
     $realCommandStatus = $?
     $realLASTEXITCODE = $LASTEXITCODE
 
