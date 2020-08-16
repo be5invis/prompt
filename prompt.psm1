@@ -248,7 +248,7 @@ function local:pathPrompt {
 function gitFancyPrompt {
 	# Reset prompt color
 	if ((get-host).Name -eq "ConsoleHost") {
-		Write-Host (([char]27) + "[0m") # Hope the client supports ANSI
+		Write-Host -NoNewLine (([char]27) + "[0m") # Hope the client supports ANSI
 	}
 	
     $realCommandStatus = $?
