@@ -1,22 +1,22 @@
 ﻿##########################################################################
 # Configuration
 
-$rightPromptGutterSymbol = " ┆"
+$rightPromptGutterSymbol = " ┆ "
 $rightPromptGutterSymbolWidth = 3
 $gitBranch = @{
     symbol = ""
     width = 1
 }
 $gitChangeSymbol = @{
-    working = "◇";
-    indexed = "◆";
-    both    = "◈";
+    working = "●";
+    indexed = "○";
+    both    = "◉";
     width   = 1;
 }
 $gitAheadBehind = @{
-    ahead = "↑"
-    behind = "↓"
-    width = 1
+    ahead = " ↑"
+    behind = " ↓"
+    width = 2
 }
 $promptLeaderUpper = ""
 $promptLeader = "╰▷"
@@ -26,6 +26,10 @@ $locationIconSet = @{
     registry = " ┌╥╖ `n └╨╜ "
 }
 $longCommandTime = 5 # in seconds
+$HGutterChar = "─"
+
+$Purple = "`e[38;5;105m"
+$ResetColor = "`e[0m"
 
 ##########################################################################
 
@@ -78,17 +82,10 @@ function local:moveCursor {
 }
 
 function local:reservePromptSpace {
-    Write-Host " "
-    Write-Host " "
     $startposx = $Host.UI.RawUI.CursorPosition.X
+    Write-Host "`n"
     $startposy = $Host.UI.RawUI.CursorPosition.Y
-    if ($startposy -gt 2) {
-        $startposy -= 1
-    }
-    else {
-        $startposy -= 2
-    }
-    $Host.UI.RawUI.CursorPosition = New-Object System.Management.Automation.Host.Coordinates $startposx, $startposy
+    $Host.UI.RawUI.CursorPosition = New-Object System.Management.Automation.Host.Coordinates $startposx, ($startposy - 1)
 }
 
 $local:userName = $env:UserName
@@ -133,7 +130,7 @@ function local:rightPromptUser {
 
 function local:gitChangeWidth([int] $working, [int] $index) {
     if($working -gt 0 -or $index -gt 0) {
-        return ($gitChangeSymbol.width)
+        return (1 + $gitChangeSymbol.width)
     } else {
         return 0
     }
@@ -141,13 +138,13 @@ function local:gitChangeWidth([int] $working, [int] $index) {
 
 function local:writeGitChangeSymbol([int] $working, [int] $index, [string] $color) {
     if($working -gt 0 -and $index -gt 0) {
-        Write-Host $gitChangeSymbol.both -NoNewline -ForegroundColor $color
+        Write-Host (" " + $gitChangeSymbol.both) -NoNewline -ForegroundColor $color
     }
     elseif($working -gt 0 ) {
-        Write-Host $gitChangeSymbol.working -NoNewline -ForegroundColor $color
+        Write-Host (" " + $gitChangeSymbol.working) -NoNewline -ForegroundColor $color
     }
     elseif($index -gt 0 ) {
-        Write-Host $gitChangeSymbol.indexed -NoNewline -ForegroundColor $color
+        Write-Host (" " + $gitChangeSymbol.indexed) -NoNewline -ForegroundColor $color
     }
 }
 
@@ -169,7 +166,6 @@ function local:rightPromptGit {
         $git_changesDisplayWidth += gitChangeWidth $status.Working.Unmerged.Count $status.Index.Unmerged.Count
         if ($status.aheadBy -gt 0) { $git_changesDisplayWidth += $gitAheadBehind.width }
         if ($status.behindBy -gt 0) { $git_changesDisplayWidth += $gitAheadBehind.width }
-        if ($git_changesDisplayWidth -gt 0) { $git_changesDisplayWidth += 1 }
         
 
         $nextColumn = $startColumn + $gitBranch.width + $git_branchNameWidth + $git_changesDisplayWidth + (rightPromptGutterWidtth $cont)
@@ -177,7 +173,6 @@ function local:rightPromptGit {
         
         Write-Host $gitBranch.symbol -nonewline -foregroundcolor Blue
         Write-Host $git_branchName -nonewline
-        if ($git_changesDisplayWidth -gt 0) { Write-Host " " -NoNewLine }
         writeGitChangeSymbol $status.Working.Added.Count    $status.Index.Added.Count    Green
         writeGitChangeSymbol $status.Working.Modified.Count $status.Index.Modified.Count Yellow
         writeGitChangeSymbol $status.Working.Deleted.Count  $status.Index.Deleted.Count  Red
@@ -208,10 +203,10 @@ function local:rightPromptLastCommandTime {
     }
 
     $timeDisplay = "$($duration.Seconds)s"
-    if ($duration.Minutes -gt 0) {
+    if ($duration.Minutes -gt 1) {
         $timeDisplay = "$($duration.Minutes)m"
     }
-    if ($duration.TotalHours -ge 1) {
+    if ($duration.TotalHours -gt 1) {
         $timeDisplay = "$([math]::floor($duration.TotalHours))h"
     }
 
@@ -223,15 +218,33 @@ function local:rightPromptLastCommandTime {
     return $nextColumn
 }
 
+function local:rightPromptSpace {
+    param ([int] $startColumn, [bool] $cont);
+    $nextColumn = $startColumn + 1
+    reserveRightSpace $nextColumn
+    Write-Host " " -NoNewLine
+    return $nextColumn
+}
+
 function local:rightPrompt {
-    $c1 = rightPromptUser 0 $false
-    $c2 = rightPromptGit $c1 $true
-    rightPromptLastCommandTime $c2 $true | Out-Null
+    $c1 = rightPromptUser  0   $false
+    $c2 = rightPromptGit   $c1 $true
+    $c3 = rightPromptLastCommandTime $c2 $true
+    rightPromptSpace $c3 $true | Out-Null
 }
 
 function local:hasPrefix {
     param ([string] $a, [string] $b);
     ($b.Length -and $a.Length -gt $b.length -and $a.Substring(0, $b.Length) -eq $b);
+}
+
+function local:hGutterPrompt {
+    $str = ""
+    $startposx = $Host.UI.RawUI.CursorPosition.X;
+    $startposy = $Host.UI.RawUI.CursorPosition.Y;
+    foreach ($n in (($startposx + 1) .. ($Host.UI.RawUI.windowsize.width - 2))) { $str += $HGutterChar }
+    Write-Host $str -NoNewLine -ForegroundColor DarkGray
+    $Host.UI.RawUI.CursorPosition = New-Object System.Management.Automation.Host.Coordinates $startposx, $startposy
 }
 
 function local:pathPrompt {
@@ -243,12 +256,13 @@ function local:pathPrompt {
     if (hasPrefix $pwd.Path $quailifier) {
         Write-Host ($pwd.Path.Substring($quailifier.Length)) -NoNewline -ForegroundColor Green
     }
+    Write-Host " " -NoNewLine
 }
 
 function gitFancyPrompt {
 	# Reset prompt color
 	if ((get-host).Name -eq "ConsoleHost") {
-		Write-Host -NoNewLine (([char]27) + "[0m") # Hope the client supports ANSI
+		Write-Host -NoNewLine $ResetColor # Hope the client supports ANSI
 	}
 	
     $realCommandStatus = $?
@@ -275,6 +289,7 @@ function gitFancyPrompt {
 
     Write-Host $locationIcon -NoNewLine -ForegroundColor $locationIconColor
     moveCursor 0 (-1)
+    hGutterPrompt
 
     $startposx = $Host.UI.RawUI.CursorPosition.X;
     $startposy = $Host.UI.RawUI.CursorPosition.Y + 1;
@@ -283,8 +298,11 @@ function gitFancyPrompt {
     rightPrompt
     
     $Host.UI.RawUI.CursorPosition = New-Object System.Management.Automation.Host.Coordinates $startposx, $startposy
-    Write-Host $promptLeader -NoNewLine -ForegroundColor $exitStress
-
+   	if ((get-host).Name -eq "ConsoleHost") {
+        Write-Host "$Purple$promptLeader$ResetColor" -NoNewLine
+    } else {
+        Write-Host $promptLeader -NoNewLine -ForegroundColor Cyan
+    }
     $global:LASTEXITCODE = $realLASTEXITCODE
     return " "
 }

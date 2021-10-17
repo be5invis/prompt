@@ -39,5 +39,5 @@ If (-Not (Test-Path Variable:PSise)) {  # Only run this in the console and not i
 
 ###############################################################################
 
-InstallModuleIfAbsent ZLocation
-Import-Module ZLocation
+InstallModuleIfAbsent z
+Import-Module z
