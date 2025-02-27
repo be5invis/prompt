@@ -19,7 +19,7 @@ $gitAheadBehind = @{
     width = 2
 }
 $promptLeaderUpper = ""
-$promptLeader = "╰▷"
+$promptLeader = "┖▶"
 $locationIconSet = @{
     unknown = " ┌─┐ `n └─┘ "
     dir = " ┌─┐ `n └─╜ "
@@ -69,23 +69,23 @@ function local:Test-Administrator {
 
 function local:reserveRightSpace {
     param ([int] $rightCharCount);
-    $startposx = $Host.UI.RawUI.windowsize.width - $rightCharCount
-    $startposy = $Host.UI.RawUI.CursorPosition.Y
-    $Host.UI.RawUI.CursorPosition = New-Object System.Management.Automation.Host.Coordinates $startposx, $startposy
+    $startPosX = $Host.UI.RawUI.windowsize.width - $rightCharCount
+    $startPosY = $Host.UI.RawUI.CursorPosition.Y
+    $Host.UI.RawUI.CursorPosition = New-Object System.Management.Automation.Host.Coordinates $startPosX, $startPosY
 }
 
 function local:moveCursor {
     param ([int] $deltaX, [int] $deltaY);
-    $startposx = $Host.UI.RawUI.CursorPosition.X + $deltaX;
-    $startposy = $Host.UI.RawUI.CursorPosition.Y + $deltaY;
-    $Host.UI.RawUI.CursorPosition = New-Object System.Management.Automation.Host.Coordinates $startposx, $startposy
+    $startPosX = $Host.UI.RawUI.CursorPosition.X + $deltaX;
+    $startPosY = $Host.UI.RawUI.CursorPosition.Y + $deltaY;
+    $Host.UI.RawUI.CursorPosition = New-Object System.Management.Automation.Host.Coordinates $startPosX, $startPosY
 }
 
 function local:reservePromptSpace {
-    $startposx = $Host.UI.RawUI.CursorPosition.X
+    $startPosX = $Host.UI.RawUI.CursorPosition.X
     Write-Host "`n"
-    $startposy = $Host.UI.RawUI.CursorPosition.Y
-    $Host.UI.RawUI.CursorPosition = New-Object System.Management.Automation.Host.Coordinates $startposx, ($startposy - 1)
+    $startPosY = $Host.UI.RawUI.CursorPosition.Y
+    $Host.UI.RawUI.CursorPosition = New-Object System.Management.Automation.Host.Coordinates $startPosX, ($startPosY - 1)
 }
 
 $local:userName = $env:UserName
@@ -95,35 +95,35 @@ if ($isAdmin) {
     $userBadgeColor = "Red"
 }
 
-function local:rightPromptGutterWidtth {
-    param ([bool] $show);
-    if ($show) {
+function local:rightPromptGutterWidth {
+    param ([int] $startColumn);
+    if ($startColumn -gt 0) {
         return $rightPromptGutterSymbolWidth
-    }
-    else {
+    } else {
         return 0
     }
 }
 
 function local:rightPromptGutter {
-    param ([bool] $show);
-    if ($show) {
+    param ([int] $startColumn);
+    if ($startColumn -gt 0) {
         Write-Host $rightPromptGutterSymbol -NoNewline -ForegroundColor DarkGray
     }
 }
 
 function local:rightPromptUser {
-    param ([int] $startColumn, [bool] $cont);
-
+    param ([int] $startColumn);
+    
+    if (-not $isAdmin) { return $startColumn; }
     
     $userBadgeText = $userName
     $userBadgeTextWidth = $userBadgeText.Length
     
-    $nextColumn = 1 + $startColumn + $userBadgeTextWidth + (rightPromptGutterWidtth $cont)
+    $nextColumn = 1 + $startColumn + $userBadgeTextWidth + (rightPromptGutterWidth $startColumn)
 
     reserveRightSpace $nextColumn
     Write-Host $userBadgeText -nonewline -foregroundcolor $userBadgeColor
-    rightPromptGutter $cont
+    rightPromptGutter $startColumn
 
     return $nextColumn
 }
@@ -149,7 +149,7 @@ function local:writeGitChangeSymbol([int] $working, [int] $index, [string] $colo
 }
 
 function local:rightPromptGit {
-    param ([int] $startColumn, [bool] $cont);
+    param ([int] $startColumn);
 
     if (hasIdentifierFile ".git") {
         $status = Get-GitStatus
@@ -168,7 +168,7 @@ function local:rightPromptGit {
         if ($status.behindBy -gt 0) { $git_changesDisplayWidth += $gitAheadBehind.width }
         
 
-        $nextColumn = $startColumn + $gitBranch.width + $git_branchNameWidth + $git_changesDisplayWidth + (rightPromptGutterWidtth $cont)
+        $nextColumn = $startColumn + $gitBranch.width + $git_branchNameWidth + $git_changesDisplayWidth + (rightPromptGutterWidth $startColumn)
         reserveRightSpace $nextColumn
         
         Write-Host $gitBranch.symbol -nonewline -foregroundcolor Blue
@@ -179,7 +179,7 @@ function local:rightPromptGit {
         writeGitChangeSymbol $status.Working.Unmerged.Count $status.Index.Unmerged.Count Magenta
         if ($status.aheadBy -gt 0) { Write-Host $gitAheadBehind.ahead -NoNewLine -ForegroundColor Cyan }
         if ($status.behindBy -gt 0) { Write-Host $gitAheadBehind.behind -NoNewLine -ForegroundColor Cyan }
-        rightPromptGutter $cont
+        rightPromptGutter $startColumn
 
         return $nextColumn
     }
@@ -189,7 +189,7 @@ function local:rightPromptGit {
 }
 
 function local:rightPromptLastCommandTime {
-    param ([int] $startColumn, [bool] $cont);
+    param ([int] $startColumn);
 
     $historyList = (Get-History)
     if ($null -eq $historyList) {
@@ -202,35 +202,39 @@ function local:rightPromptLastCommandTime {
         return $startColumn
     }
 
-    $timeDisplay = "$($duration.Seconds)s"
-    if ($duration.Minutes -gt 1) {
-        $timeDisplay = "$($duration.Minutes)m"
+    $timeDisplay = "$([Math]::floor($duration.TotalSeconds))s"
+    if ($duration.TotalMinutes -gt 2.0) {
+        $timeDisplay = "$([Math]::floor($duration.TotalMinutes))m"
     }
-    if ($duration.TotalHours -gt 1) {
-        $timeDisplay = "$([math]::floor($duration.TotalHours))h"
+    if ($duration.TotalHours -gt 2.0) {
+        $timeDisplay = "$([Math]::floor($duration.TotalHours))h"
     }
 
-    $nextColumn = $startColumn + $timeDisplay.Length + (rightPromptGutterWidtth $cont)
+    $nextColumn = $startColumn + $timeDisplay.Length + (rightPromptGutterWidth $startColumn)
     reserveRightSpace $nextColumn
     Write-Host $timeDisplay -NoNewline -ForegroundColor Yellow
-    rightPromptGutter $cont
+    rightPromptGutter $startColumn
 
     return $nextColumn
 }
 
 function local:rightPromptSpace {
-    param ([int] $startColumn, [bool] $cont);
-    $nextColumn = $startColumn + 1
-    reserveRightSpace $nextColumn
-    Write-Host " " -NoNewLine
-    return $nextColumn
+    param ([int] $startColumn);
+    if ($startColumn -eq 0) {
+        return $startColumn
+    } else {
+        $nextColumn = $startColumn + 1
+        reserveRightSpace $nextColumn
+        Write-Host " " -NoNewLine
+        return $nextColumn
+    }
 }
 
 function local:rightPrompt {
-    $c1 = rightPromptUser  0   $false
-    $c2 = rightPromptGit   $c1 $true
-    $c3 = rightPromptLastCommandTime $c2 $true
-    rightPromptSpace $c3 $true | Out-Null
+    $c1 = rightPromptUser            0
+    $c2 = rightPromptGit             $c1
+    $c3 = rightPromptLastCommandTime $c2
+    rightPromptSpace $c3 | Out-Null
 }
 
 function local:hasPrefix {
@@ -240,11 +244,11 @@ function local:hasPrefix {
 
 function local:hGutterPrompt {
     $str = ""
-    $startposx = $Host.UI.RawUI.CursorPosition.X;
-    $startposy = $Host.UI.RawUI.CursorPosition.Y;
-    foreach ($n in (($startposx + 1) .. ($Host.UI.RawUI.windowsize.width - 2))) { $str += $HGutterChar }
+    $startPosX = $Host.UI.RawUI.CursorPosition.X;
+    $startPosY = $Host.UI.RawUI.CursorPosition.Y;
+    foreach ($n in (($startPosX + 1) .. ($Host.UI.RawUI.windowsize.width))) { $str += $HGutterChar }
     Write-Host $str -NoNewLine -ForegroundColor DarkGray
-    $Host.UI.RawUI.CursorPosition = New-Object System.Management.Automation.Host.Coordinates $startposx, $startposy
+    $Host.UI.RawUI.CursorPosition = New-Object System.Management.Automation.Host.Coordinates $startPosX, $startPosY
 }
 
 function local:pathPrompt {
@@ -291,13 +295,13 @@ function gitFancyPrompt {
     moveCursor 0 (-1)
     hGutterPrompt
 
-    $startposx = $Host.UI.RawUI.CursorPosition.X;
-    $startposy = $Host.UI.RawUI.CursorPosition.Y + 1;
+    $startPosX = $Host.UI.RawUI.CursorPosition.X;
+    $startPosY = $Host.UI.RawUI.CursorPosition.Y + 1;
 
     pathPrompt $locationIconColor $exitStress
     rightPrompt
     
-    $Host.UI.RawUI.CursorPosition = New-Object System.Management.Automation.Host.Coordinates $startposx, $startposy
+    $Host.UI.RawUI.CursorPosition = New-Object System.Management.Automation.Host.Coordinates $startPosX, $startPosY
    	if ((get-host).Name -eq "ConsoleHost") {
         Write-Host "$Purple$promptLeader$ResetColor" -NoNewLine
     } else {
